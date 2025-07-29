@@ -1,0 +1,6 @@
+/analyzers/
+/misp-docker/
+/elastic-thehive.py
+/venv/
+/.elastic-thehive.py.swp
+/.env

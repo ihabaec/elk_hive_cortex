@@ -1,0 +1,7 @@
+cluster.name: "docker-cluster"
+network.host: 0.0.0.0
+discovery.type: single-node
+
+# Disable security
+xpack.security.enabled: true
+xpack.security.authc.api_key.enabled: true
