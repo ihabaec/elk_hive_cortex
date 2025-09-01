@@ -28,29 +28,6 @@ Instead of focusing only on detection (SIEM), this stack goes further by integra
 
 ---
 
-## 📚 Contents
-
-1. [Requirements](#requirements)  
-   * [Host setup](#host-setup)  
-   * [Ports](#ports)  
-2. [Usage](#usage)  
-   * [Cloning the repository](#cloning-the-repository)  
-   * [Bringing up the stack](#bringing-up-the-stack)  
-   * [Initial setup](#initial-setup)  
-   * [Cleanup](#cleanup)  
-3. [Configuration](#configuration)  
-   * [Elasticsearch](#how-to-configure-elasticsearch)  
-   * [Kibana](#how-to-configure-kibana)  
-   * [TheHive](#how-to-configure-thehive)  
-   * [Cortex](#how-to-configure-cortex)  
-   * [MISP](#how-to-configure-misp)  
-   * [OpenCTI](#how-to-configure-opencti)  
-4. [Extensibility](#extensibility)  
-5. [Going further](#going-further)  
-6. [License](#license)  
-
----
-
 ## 🖥️ Requirements
 
 ### Host setup
@@ -170,24 +147,6 @@ Used for dashboards, SIEM rules, and alerts.
 
 * Access via [http://localhost:8080](http://localhost:8080).
 * Create API keys.
-
----
-
-## 🔧 Extensibility
-
-* Add **custom detection rules** in Kibana (Sigma rules).
-* Add **new Cortex responders** (e.g. WinRM responder to delete malicious files).
-* Add **external MISP feeds** and sync with communities.
-* Extend **OpenCTI connectors** (MalwareBazaar, OTX, etc.).
-
----
-
-## 📈 Going further
-
-* Deploy in production with **TLS, HTTPS, and authentication**.
-* Add **SOAR orchestration** for full playbooks.
-* Integrate more **log sources**: Linux Auditd, Suricata IDS, Zeek.
-* Use **Elastic ML** for anomaly detection.
 
 ---
 
