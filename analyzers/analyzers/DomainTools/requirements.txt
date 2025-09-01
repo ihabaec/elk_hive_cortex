@@ -1,0 +1,2 @@
+cortexutils
+domaintools_api==0.6.2

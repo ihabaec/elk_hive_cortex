@@ -1,0 +1,5 @@
+{
+  "winrm_host_user": "vagrant",
+  "winrm_host_pass": "vagrant"
+}
+

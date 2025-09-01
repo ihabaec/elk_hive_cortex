@@ -1,0 +1,26 @@
+{
+  "name": "MimikatzResponder",
+  "version": "1.0",
+  "author": "Ihab Ihab",
+  "url": "https://yourcompany.com",
+  "license": "AGPL-V3",
+  "description": "Performs containment and forensic collection for Mimikatz detection",
+  "dataTypeList": ["ip", "hostname"],
+  "command": "python3 MimikatzResponder.py",
+  "baseConfig": "default",
+  "config": [
+    {
+      "name": "winrm_host_user",
+      "description": "WinRM username",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "winrm_host_pass",
+      "description": "WinRM password",
+      "type": "password",
+      "mandatory": true
+    }
+  ]
+}
+
