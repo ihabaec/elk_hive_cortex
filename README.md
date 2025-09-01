@@ -69,7 +69,7 @@ Instead of focusing only on detection (SIEM), this stack goes further by integra
 | Kibana        | 5601  | <http://localhost:5601> |
 | TheHive       | 9000  | <http://localhost:9000> |
 | Cortex        | 9001  | <http://localhost:9001> |
-| MISP          | 8443  | <https://localhost:8443> |
+| MISP          | 80  | <http://localhost> |
 | OpenCTI       | 8080  | <http://localhost:8080> |
 
 ---
@@ -118,15 +118,14 @@ Start all services with a single command:
 5. **OpenCTI**
 
    * Generate an API key.
-   * Connect to TheHive and MISP.
-   * Import MITRE ATT\&CK dataset.
+   * Connect to TheHive and OpenCTI using the connecter image.
 
 ### Cleanup
 
 To stop all services:
 
 ```sh
-docker compose down
+CTRL-C
 ```
 
 To stop and remove **all data**:
@@ -153,17 +152,17 @@ Used for dashboards, SIEM rules, and alerts.
 
 * Access via [http://localhost:9000](http://localhost:9000).
 * Add API keys for automation.
-* Configure MISP & Cortex connectors.
+* Run the python thehive-elastic.py to import cases/alerts from kibana alerts.
 
 ### How to configure Cortex
 
 * Access via [http://localhost:9001](http://localhost:9001).
-* Install analyzers and responders.
+* Install analyzers and responders (NOTE: for each new analyzer/responder you will have to install the dependancies on the image).
 * Update `application.conf` with correct keys.
 
 ### How to configure MISP
 
-* Access via [https://localhost:8443](https://localhost:8443).
+* Access via [http://localhost](http://localhost).
 * Set up feeds, users, taxonomies.
 * Connect to TheHive for automatic case export.
 
@@ -171,8 +170,6 @@ Used for dashboards, SIEM rules, and alerts.
 
 * Access via [http://localhost:8080](http://localhost:8080).
 * Create API keys.
-* Connect OpenCTI to TheHive and MISP.
-* Enable MITRE ATT\&CK mapping.
 
 ---
 
