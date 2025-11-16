@@ -1,504 +1,496 @@
-# Elastic stack (ELK) on Docker
+# Security Operations Platform - ELK + TheHive + Cortex
 
-[![Elastic Stack version](https://img.shields.io/badge/Elastic%20Stack-9.0.3-00bfb3?style=flat&logo=elastic-stack)](https://www.elastic.co/blog/category/releases)
-[![Build Status](https://github.com/deviantony/docker-elk/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/deviantony/docker-elk/actions/workflows/ci.yml?query=branch%3Amain)
-[![Join the chat](https://badges.gitter.im/Join%20Chat.svg)](https://app.gitter.im/#/room/#deviantony_docker-elk:gitter.im)
+A comprehensive security operations and threat intelligence platform integrating the Elastic Stack (ELK), TheHive, Cortex, MISP, and OpenCTI for advanced SIEM capabilities and incident response.
 
-Run the latest version of the [Elastic stack][elk-stack] with Docker and Docker Compose.
+[![Elastic Stack version](https://img.shields.io/badge/Elastic%20Stack-7.17.13-00bfb3?style=flat&logo=elastic-stack)](https://www.elastic.co/blog/category/releases)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-It gives you the ability to analyze any data set by using the searching/aggregation capabilities of Elasticsearch and
-the visualization power of Kibana.
+## Table of Contents
 
-Based on the [official Docker images][elastic-docker] from Elastic:
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Components](#components)
+- [Integration Details](#integration-details)
+- [Troubleshooting](#troubleshooting)
+- [Security Considerations](#security-considerations)
+- [Contributing](#contributing)
+- [License](#license)
 
-* [Elasticsearch](https://github.com/elastic/elasticsearch/tree/main/distribution/docker)
-* [Logstash](https://github.com/elastic/logstash/tree/main/docker)
-* [Kibana](https://github.com/elastic/kibana/tree/main/src/dev/build/tasks/os_packages/docker_generator)
+## Overview
 
-Other available stack variants:
+This project provides a complete security operations platform that combines:
 
-* [`tls`](https://github.com/deviantony/docker-elk/tree/tls): TLS encryption enabled in Elasticsearch, Kibana (opt in),
-  and Fleet
+- **Elastic Stack (ELK)**: Log aggregation, search, and visualization
+- **TheHive**: Security incident response platform
+- **Cortex**: Observable analysis and active response engine
+- **MISP**: Threat intelligence platform for sharing, storing and correlating IoCs
+- **OpenCTI**: Open Cyber Threat Intelligence platform
+- **Custom Integration**: Automated alert forwarding from Elasticsearch to TheHive
 
-> [!IMPORTANT]
-> [Platinum][subscriptions] features are enabled by default for a [trial][license-mngmt] duration of **30 days**. After
-> this evaluation period, you will retain access to all the free features included in the Open Basic license seamlessly,
-> without manual intervention required, and without losing any data. Refer to the [How to disable paid
-> features](#how-to-disable-paid-features) section to opt out of this behaviour.
+The platform enables security teams to:
+- Collect and analyze security logs in real-time
+- Automatically create security incidents from SIEM alerts
+- Enrich observables with threat intelligence
+- Orchestrate incident response workflows
+- Share and consume threat intelligence
 
----
+## Architecture
 
-## tl;dr
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Security Operations Platform              │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐              │
+│  │Logstash  │───▶│Elastic-  │───▶│ Kibana   │              │
+│  │          │    │search    │    │          │              │
+│  └──────────┘    └────┬─────┘    └──────────┘              │
+│                       │                                       │
+│                       │ elastic-thehive.py                   │
+│                       ▼                                       │
+│                  ┌──────────┐                                │
+│                  │ TheHive  │                                │
+│                  └────┬─────┘                                │
+│                       │                                       │
+│                       ├──────▶┌──────────┐                  │
+│                       │       │  Cortex  │                  │
+│                       │       └──────────┘                  │
+│                       │                                       │
+│                       ├──────▶┌──────────┐                  │
+│                       │       │   MISP   │                  │
+│                       │       └──────────┘                  │
+│                       │                                       │
+│                       └──────▶┌──────────┐                  │
+│                               │ OpenCTI  │                  │
+│                               └──────────┘                  │
+└─────────────────────────────────────────────────────────────┘
+```
 
-```sh
+## Features
+
+### SIEM Capabilities
+- Real-time log collection and analysis
+- Advanced search and filtering with Elasticsearch
+- Custom detection rules and alerts
+- Interactive dashboards and visualizations with Kibana
+
+### Incident Response
+- Automated alert-to-case creation
+- Observable extraction and enrichment
+- Case templates for common incident types
+- Investigation task automation
+- Collaborative case management
+
+### Threat Intelligence
+- IoC sharing and correlation with MISP
+- Threat actor tracking with OpenCTI
+- Automated observable analysis with Cortex
+- Integration with multiple threat intelligence feeds
+
+### Automation
+- Automatic alert ingestion from Elasticsearch to TheHive
+- Hash extraction from process execution events
+- Observable deduplication
+- Task creation based on alert severity
+- Support for ECS (Elastic Common Schema) format
+
+## Prerequisites
+
+### System Requirements
+- **OS**: Linux, macOS, or Windows with WSL2
+- **RAM**: Minimum 8GB (16GB recommended)
+- **Disk**: 50GB+ free space
+- **CPU**: 4+ cores recommended
+
+### Software Requirements
+- [Docker Engine](https://docs.docker.com/get-started/get-docker/) version 18.06.0 or newer
+- [Docker Compose](https://docs.docker.com/compose/install/) version 2.0.0 or newer
+- Python 3.7+ (for the integration script)
+
+### Network Ports
+
+The stack exposes the following ports:
+
+| Port | Service | Description |
+|------|---------|-------------|
+| 5044 | Logstash | Beats input |
+| 5601 | Kibana | Web UI |
+| 9000 | TheHive | Web UI |
+| 9001 | Cortex | Web UI |
+| 9200 | Elasticsearch | HTTP API |
+| 9300 | Elasticsearch | Transport |
+| 9600 | Logstash | Monitoring API |
+| 50000 | Logstash | TCP/UDP input |
+| 8080 | MISP | Web UI (if enabled) |
+
+## Quick Start
+
+### 1. Clone the Repository
+
+```bash
+git clone <repository-url>
+cd docker-elk
+```
+
+### 2. Configure Environment Variables
+
+Copy the example environment file and customize it:
+
+```bash
+cp .env.example .env
+```
+
+Edit [.env](.env) and update the following critical settings:
+
+```bash
+# Elasticsearch credentials
+ELASTIC_PASSWORD=your_secure_password_here
+
+# TheHive API key (generate after first setup)
+THEHIVE_API_KEY=your_thehive_api_key
+
+# MISP settings (if using)
+ADMIN_PASSWORD=your_misp_admin_password
+MYSQL_PASSWORD=your_mysql_password
+```
+
+### 3. Initialize the Stack
+
+Run the setup container to initialize Elasticsearch users:
+
+```bash
 docker compose up setup
 ```
 
-```sh
-docker compose up
+Wait for the setup to complete successfully.
+
+### 4. Start All Services
+
+#### Option A: Use the Start Script (Recommended)
+
+```bash
+chmod +x start.sh
+./start.sh
 ```
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/6f67cbc0-ddee-44bf-8f4d-7fd2d70f5217">
-  <img alt="Animated demo" src="https://github.com/user-attachments/assets/501a340a-e6df-4934-90a2-6152b462c14a">
-</picture>
+This will start all services (ELK, TheHive, Cortex, MISP, OpenCTI) in the correct order.
 
----
+#### Option B: Start Manually
 
-## Philosophy
+```bash
+# Start ELK Stack + TheHive + Cortex
+docker compose up -d
 
-We aim at providing the simplest possible entry into the Elastic stack for anybody who feels like experimenting with
-this powerful combo of technologies. This project's default configuration is purposely minimal and unopinionated. It
-does not rely on any external dependency, and uses as little custom automation as necessary to get things up and
-running.
+# Start MISP (optional)
+cd misp-docker && docker compose up -d && cd ..
 
-Instead, we believe in good documentation so that you can use this repository as a template, tweak it, and make it _your
-own_. [sherifabdlnaby/elastdocker][elastdocker] is one example among others of project that builds upon this idea.
-
----
-
-## Contents
-
-1. [Requirements](#requirements)
-   * [Host setup](#host-setup)
-   * [Docker Desktop](#docker-desktop)
-     * [Windows](#windows)
-     * [macOS](#macos)
-1. [Usage](#usage)
-   * [Bringing up the stack](#bringing-up-the-stack)
-   * [Initial setup](#initial-setup)
-     * [Setting up user authentication](#setting-up-user-authentication)
-     * [Injecting data](#injecting-data)
-   * [Cleanup](#cleanup)
-   * [Version selection](#version-selection)
-1. [Configuration](#configuration)
-   * [How to configure Elasticsearch](#how-to-configure-elasticsearch)
-   * [How to configure Kibana](#how-to-configure-kibana)
-   * [How to configure Logstash](#how-to-configure-logstash)
-   * [How to disable paid features](#how-to-disable-paid-features)
-   * [How to scale out the Elasticsearch cluster](#how-to-scale-out-the-elasticsearch-cluster)
-   * [How to re-execute the setup](#how-to-re-execute-the-setup)
-   * [How to reset a password programmatically](#how-to-reset-a-password-programmatically)
-1. [Extensibility](#extensibility)
-   * [How to add plugins](#how-to-add-plugins)
-   * [How to enable the provided extensions](#how-to-enable-the-provided-extensions)
-1. [JVM tuning](#jvm-tuning)
-   * [How to specify the amount of memory used by a service](#how-to-specify-the-amount-of-memory-used-by-a-service)
-   * [How to enable a remote JMX connection to a service](#how-to-enable-a-remote-jmx-connection-to-a-service)
-1. [Going further](#going-further)
-   * [Plugins and integrations](#plugins-and-integrations)
-
-## Requirements
-
-### Host setup
-
-* [Docker Engine][docker-install] version **18.06.0** or newer
-* [Docker Compose][compose-install] version **2.0.0** or newer
-* 1.5 GB of RAM
-
-> [!NOTE]
-> Especially on Linux, make sure your user has the [required permissions][linux-postinstall] to interact with the Docker
-> daemon.
-
-By default, the stack exposes the following ports:
-
-* 5044: Logstash Beats input
-* 50000: Logstash TCP input
-* 9600: Logstash monitoring API
-* 9200: Elasticsearch HTTP
-* 9300: Elasticsearch TCP transport
-* 5601: Kibana
-
-> [!WARNING]
-> Elasticsearch's [bootstrap checks][bootstrap-checks] were purposely disabled to facilitate the setup of the Elastic
-> stack in development environments. For production setups, we recommend users to set up their host according to the
-> instructions from the Elasticsearch documentation: [Important System Configuration][es-sys-config].
-
-### Docker Desktop
-
-#### Windows
-
-If you are using the legacy Hyper-V mode of _Docker Desktop for Windows_, ensure that [File
-Sharing][desktop-filesharing] is enabled for the `C:` drive.
-
-#### macOS
-
-The default configuration of _Docker Desktop for Mac_ allows mounting files from `/Users/`, `/Volume/`, `/private/`,
-`/tmp` and `/var/folders` exclusively. Make sure the repository is cloned in one of those locations or follow the
-instructions from the [documentation][desktop-filesharing] to add more locations.
-
-## Usage
-
-> [!WARNING]
-> You must rebuild the stack images with `docker compose build` whenever you switch branch or update the
-> [version](#version-selection) of an already existing stack.
-
-### Bringing up the stack
-
-Clone this repository onto the Docker host that will run the stack with the command below:
-
-```sh
-git clone https://github.com/deviantony/docker-elk.git
+# Start OpenCTI (optional)
+cd opencti-docker && docker compose up -d && cd ..
 ```
 
-Then, initialize the Elasticsearch users and groups required by docker-elk by executing the command:
+### 5. Access the Services
 
-```sh
-docker compose up setup
+Wait 2-3 minutes for all services to initialize, then access:
+
+- **Kibana**: http://localhost:5601
+  - Username: `elastic`
+  - Password: (from `.env` file)
+
+- **TheHive**: http://localhost:9000
+  - Default credentials will be shown on first access
+
+- **Cortex**: http://localhost:9001
+  - Configure on first access
+
+- **Elasticsearch**: http://localhost:9200
+
+### 6. Start the Integration Script
+
+Install Python dependencies:
+
+```bash
+pip install -r requirements.txt
+# or manually:
+pip install elasticsearch requests
 ```
 
-If everything went well and the setup completed without error, start the other stack components:
+Update the configuration in [elastic-thehive.py](elastic-thehive.py):
 
-```sh
-docker compose up
+```python
+# Elasticsearch Configuration
+ES_AUTH = ("elastic", "your_password")
+
+# TheHive Configuration
+THEHIVE_API_KEY = "your_thehive_api_key"
 ```
 
-> [!NOTE]
-> You can also run all services in the background (detached mode) by appending the `-d` flag to the above command.
+Run the integration script:
 
-Give Kibana about a minute to initialize, then access the Kibana web UI by opening <http://localhost:5601> in a web
-browser and use the following (default) credentials to log in:
-
-* user: *elastic*
-* password: *changeme*
-
-> [!NOTE]
-> Upon the initial startup, the `elastic`, `logstash_internal` and `kibana_system` Elasticsearch users are initialized
-> with the values of the passwords defined in the [`.env`](.env) file (_"changeme"_ by default). The first one is the
-> [built-in superuser][builtin-users], the other two are used by Kibana and Logstash respectively to communicate with
-> Elasticsearch. This task is only performed during the _initial_ startup of the stack. To change users' passwords
-> _after_ they have been initialized, please refer to the instructions in the next section.
-
-### Initial setup
-
-#### Setting up user authentication
-
-> [!NOTE]
-> Refer to [Security settings in Elasticsearch][es-security] to disable authentication.
-
-> [!WARNING]
-> Starting with Elastic v8.0.0, it is no longer possible to run Kibana using the bootstrapped privileged `elastic` user.
-
-The _"changeme"_ password set by default for all aforementioned users is **unsecure**. For increased security, we will
-reset the passwords of all aforementioned Elasticsearch users to random secrets.
-
-1. Reset passwords for default users
-
-    The commands below reset the passwords of the `elastic`, `logstash_internal` and `kibana_system` users. Take note
-    of them.
-
-    ```sh
-    docker compose exec elasticsearch bin/elasticsearch-reset-password --batch --user elastic
-    ```
-
-    ```sh
-    docker compose exec elasticsearch bin/elasticsearch-reset-password --batch --user logstash_internal
-    ```
-
-    ```sh
-    docker compose exec elasticsearch bin/elasticsearch-reset-password --batch --user kibana_system
-    ```
-
-    If the need for it arises (e.g. if you want to [collect monitoring information][ls-monitoring] through Beats and
-    other components), feel free to repeat this operation at any time for the rest of the [built-in
-    users][builtin-users].
-
-1. Replace usernames and passwords in configuration files
-
-    Replace the password of the `elastic` user inside the `.env` file with the password generated in the previous step.
-    Its value isn't used by any core component, but [extensions](#how-to-enable-the-provided-extensions) use it to
-    connect to Elasticsearch.
-
-    > [!NOTE]
-    > In case you don't plan on using any of the provided [extensions](#how-to-enable-the-provided-extensions), or
-    > prefer to create your own roles and users to authenticate these services, it is safe to remove the
-    > `ELASTIC_PASSWORD` entry from the `.env` file altogether after the stack has been initialized.
-
-    Replace the password of the `logstash_internal` user inside the `.env` file with the password generated in the
-    previous step. Its value is referenced inside the Logstash pipeline file (`logstash/pipeline/logstash.conf`).
-
-    Replace the password of the `kibana_system` user inside the `.env` file with the password generated in the previous
-    step. Its value is referenced inside the Kibana configuration file (`kibana/config/kibana.yml`).
-
-    See the [Configuration](#configuration) section below for more information about these configuration files.
-
-1. Restart Logstash and Kibana to re-connect to Elasticsearch using the new passwords
-
-    ```sh
-    docker compose up -d logstash kibana
-    ```
-
-> [!NOTE]
-> Learn more about the security of the Elastic stack at [Secure the Elastic Stack][sec-cluster].
-
-#### Injecting data
-
-Launch the Kibana web UI by opening <http://localhost:5601> in a web browser, and use the following credentials to log
-in:
-
-* user: *elastic*
-* password: *\<your generated elastic password>*
-
-Now that the stack is fully configured, you can go ahead and inject some log entries.
-
-The shipped Logstash configuration allows you to send data over the TCP port 50000. For example, you can use one of the
-following commands — depending on your installed version of `nc` (Netcat) — to ingest the content of the log file
-`/path/to/logfile.log` in Elasticsearch, via Logstash:
-
-```sh
-# Execute `nc -h` to determine your `nc` version
-
-cat /path/to/logfile.log | nc -q0 localhost 50000          # BSD
-cat /path/to/logfile.log | nc -c localhost 50000           # GNU
-cat /path/to/logfile.log | nc --send-only localhost 50000  # nmap
+```bash
+python3 elastic-thehive.py
 ```
 
-You can also load the sample data provided by your Kibana installation.
-
-### Cleanup
-
-Elasticsearch data is persisted inside a volume by default.
-
-In order to entirely shutdown the stack and remove all persisted data, use the following Docker Compose command:
-
-```sh
-docker compose --profile=setup down -v
-```
-
-### Version selection
-
-This repository stays aligned with the latest version of the Elastic stack. The `main` branch tracks the current major
-version (9.x).
-
-To use a different version of the core Elastic components, simply change the version number inside the [`.env`](.env)
-file. If you are upgrading an existing stack, remember to rebuild all container images using the `docker compose build`
-command.
-
-> [!IMPORTANT]
-> Always pay attention to the [official upgrade instructions][upgrade] for each individual component before performing a
-> stack upgrade.
-
-Older major versions are also supported on separate branches:
-
-* [`release-8.x`](https://github.com/deviantony/docker-elk/tree/release-8.x): 8.x series
-* [`release-7.x`](https://github.com/deviantony/docker-elk/tree/release-7.x): 7.x series (End-of-Life)
-* [`release-6.x`](https://github.com/deviantony/docker-elk/tree/release-6.x): 6.x series (End-of-life)
-* [`release-5.x`](https://github.com/deviantony/docker-elk/tree/release-5.x): 5.x series (End-of-life)
+The script will continuously monitor Elasticsearch for SIEM alerts and automatically create cases in TheHive.
 
 ## Configuration
 
-> [!IMPORTANT]
-> Configuration is not dynamically reloaded, you will need to restart individual components after any configuration
-> change.
+### Elasticsearch
 
-### How to configure Elasticsearch
+Configuration file: [elasticsearch/config/elasticsearch.yml](elasticsearch/config/elasticsearch.yml)
 
-The Elasticsearch configuration is stored in [`elasticsearch/config/elasticsearch.yml`][config-es].
+Key settings can also be configured via environment variables in [docker-compose.yml](docker-compose.yml):
 
-You can also specify the options you want to override by setting environment variables inside the Compose file:
-
-```yml
+```yaml
 elasticsearch:
-
   environment:
-    network.host: _non_loopback_
-    cluster.name: my-cluster
+    ES_JAVA_OPTS: -Xms512m -Xmx512m  # Heap size
+    discovery.type: single-node
 ```
 
-Please refer to the following documentation page for more details about how to configure Elasticsearch inside Docker
-containers: [Install Elasticsearch with Docker][es-docker].
+### Logstash
 
-### How to configure Kibana
+Configuration file: [logstash/config/logstash.yml](logstash/config/logstash.yml)
 
-The Kibana default configuration is stored in [`kibana/config/kibana.yml`][config-kbn].
+Pipeline configuration: [logstash/pipeline/](logstash/pipeline/)
 
-You can also specify the options you want to override by setting environment variables inside the Compose file:
+### Kibana
 
-```yml
-kibana:
+Configuration file: [kibana/config/kibana.yml](kibana/config/kibana.yml)
 
-  environment:
-    SERVER_NAME: kibana.example.org
+### TheHive
+
+Configuration file: [thehive/application.conf](thehive/application.conf)
+
+Key configuration points:
+- Elasticsearch backend connection
+- Authentication settings
+- Cortex integration
+
+### Cortex
+
+Configuration file: [cortex/application.conf](cortex/application.conf)
+
+Analyzers directory: [analyzers/](analyzers/)
+
+### Integration Script
+
+Edit [elastic-thehive.py](elastic-thehive.py) to configure:
+
+```python
+# Polling interval (seconds)
+POLL_INTERVAL = 30
+
+# Elasticsearch index to monitor
+ES_INDEX = ".siem-signals-default"
+
+# TheHive alert/case creation settings
 ```
 
-Please refer to the following documentation page for more details about how to configure Kibana inside Docker
-containers: [Install Kibana with Docker][kbn-docker].
+## Usage
 
-### How to configure Logstash
+### Creating SIEM Detection Rules
 
-The Logstash configuration is stored in [`logstash/config/logstash.yml`][config-ls].
+1. Access Kibana at http://localhost:5601
+2. Navigate to **Security** > **Rules**
+3. Create detection rules for threats
+4. Alerts will automatically flow to TheHive
 
-You can also specify the options you want to override by setting environment variables inside the Compose file:
+### Working with TheHive Cases
 
-```yml
-logstash:
+1. Access TheHive at http://localhost:9000
+2. View automatically created cases from Elasticsearch alerts
+3. Cases include:
+   - Alert metadata and description
+   - Extracted observables (hashes, filenames, IPs, etc.)
+   - Pre-created investigation tasks for high-severity incidents
+   - Links back to original Elasticsearch alerts
 
-  environment:
-    LOG_LEVEL: debug
+### Analyzing Observables with Cortex
+
+1. Install analyzers in the [analyzers/](analyzers/) directory
+2. Configure Cortex connection in TheHive
+3. Run analyzers on observables directly from TheHive cases
+4. Results enrich your investigation with threat intelligence
+
+### Using Case Templates
+
+TheHive templates are available in [analyzers/thehive-templates/](analyzers/thehive-templates/)
+
+Templates provide pre-configured:
+- Custom fields for specific incident types
+- Task checklists
+- Metrics for tracking
+
+## Components
+
+### Elastic Stack
+
+- **Elasticsearch 7.17.13**: Distributed search and analytics engine
+- **Logstash 7.17.13**: Server-side data processing pipeline
+- **Kibana 7.17.13**: Data visualization and exploration
+
+### Security & Response
+
+- **TheHive 5**: Security incident response platform
+  - Case management
+  - Observable tracking
+  - Task automation
+
+- **Cortex**: Observable analysis and active response
+  - 100+ analyzers for enrichment
+  - Responders for automated actions
+  - Neuron job management
+
+### Threat Intelligence (Optional)
+
+- **MISP**: Malware Information Sharing Platform
+- **OpenCTI**: Open Cyber Threat Intelligence Platform
+
+## Integration Details
+
+### Elasticsearch to TheHive Integration
+
+The [elastic-thehive.py](elastic-thehive.py) script provides:
+
+#### Features
+- **Automated Alert Forwarding**: Monitors Elasticsearch SIEM signals index
+- **Observable Extraction**: Extracts IoCs from ECS-formatted events:
+  - Process names and paths
+  - File hashes (MD5, SHA1, SHA256, SHA512, SSDEEP, Imphash)
+  - Event IDs
+  - Network indicators (when present)
+
+- **Case Creation**: Automatically creates TheHive cases with:
+  - Descriptive titles based on detection rule
+  - Full context from original events
+  - Severity mapping
+  - Investigation tasks (for high-severity alerts)
+
+- **Deduplication**: Prevents duplicate observables
+- **Template Support**: Uses case templates for specific threat types (e.g., Mimikatz)
+- **Incremental Processing**: Tracks last processed alert to avoid duplicates
+
+#### How It Works
+
+1. Script polls Elasticsearch index `.siem-signals-default` every 30 seconds
+2. For each new alert:
+   - Fetches original event data for complete context
+   - Extracts observables (hashes, filenames, etc.)
+   - Creates an alert in TheHive
+   - Creates a case with all observables
+   - Adds investigation tasks for high-severity incidents
+3. Tracks processed alerts in `.last_alert_id` file
+
+## Troubleshooting
+
+### Common Issues
+
+#### Elasticsearch fails to start
+```bash
+# Check logs
+docker compose logs elasticsearch
+
+# Common fix: Increase vm.max_map_count
+sudo sysctl -w vm.max_map_count=262144
 ```
 
-Please refer to the following documentation page for more details about how to configure Logstash inside Docker
-containers: [Configuring Logstash for Docker][ls-docker].
+#### TheHive cannot connect to Elasticsearch
+- Verify Elasticsearch is running: `curl http://localhost:9200`
+- Check TheHive configuration in [thehive/application.conf](thehive/application.conf)
+- Ensure correct credentials are set
 
-### How to disable paid features
+#### Integration script errors
+```bash
+# Enable debug logging
+# Edit elastic-thehive.py and set:
+logging.basicConfig(level=logging.DEBUG)
 
-You can cancel an ongoing trial before its expiry date — and thus revert to a basic license — either from the [License
-Management][license-mngmt] panel of Kibana, or using Elasticsearch's `start_basic` [Licensing API][license-apis]. Please
-note that the second option is the only way to recover access to Kibana if the license isn't either switched to `basic`
-or upgraded before the trial's expiry date.
+# Check Elasticsearch connectivity
+curl -u elastic:password http://localhost:9200/.siem-signals-default/_search
 
-Changing the license type by switching the value of Elasticsearch's `xpack.license.self_generated.type` setting from
-`trial` to `basic` (see [License settings][license-settings]) will only work **if done prior to the initial setup.**
-After a trial has been started, the loss of features from `trial` to `basic` _must_ be acknowledged using one of the two
-methods described in the first paragraph.
-
-### How to scale out the Elasticsearch cluster
-
-Follow the instructions from the Wiki: [Scaling out Elasticsearch](https://github.com/deviantony/docker-elk/wiki/Elasticsearch-cluster)
-
-### How to re-execute the setup
-
-To run the setup container again and re-initialize all users for which a password was defined inside the `.env` file,
-simply "up" the `setup` Compose service again:
-
-```console
-$ docker compose up setup
- ⠿ Container docker-elk-elasticsearch-1  Running
- ⠿ Container docker-elk-setup-1          Created
-Attaching to docker-elk-setup-1
-...
-docker-elk-setup-1  | [+] User 'monitoring_internal'
-docker-elk-setup-1  |    ⠿ User does not exist, creating
-docker-elk-setup-1  | [+] User 'beats_system'
-docker-elk-setup-1  |    ⠿ User exists, setting password
-docker-elk-setup-1 exited with code 0
+# Verify TheHive API key
+curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:9000/api/status
 ```
 
-### How to reset a password programmatically
-
-If for any reason your are unable to use Kibana to change the password of your users (including [built-in
-users][builtin-users]), you can use the Elasticsearch API instead and achieve the same result.
-
-In the example below, we reset the password of the `elastic` user (notice "/user/elastic" in the URL):
-
-```sh
-curl -XPOST -D- 'http://localhost:9200/_security/user/elastic/_password' \
-    -H 'Content-Type: application/json' \
-    -u elastic:<your current elastic password> \
-    -d '{"password" : "<your new password>"}'
+#### Memory issues
+```bash
+# Reduce Java heap sizes in docker-compose.yml
+ES_JAVA_OPTS: -Xms256m -Xmx256m
+LS_JAVA_OPTS: -Xms128m -Xmx128m
 ```
 
-## Extensibility
+### Logs
 
-### How to add plugins
+View logs for specific services:
 
-To add plugins to any ELK component you have to:
-
-1. Add a `RUN` statement to the corresponding `Dockerfile` (eg. `RUN logstash-plugin install logstash-filter-json`)
-1. Add the associated plugin code configuration to the service configuration (eg. Logstash input/output)
-1. Rebuild the images using the `docker compose build` command
-
-### How to enable the provided extensions
-
-A few extensions are available inside the [`extensions`](extensions) directory. These extensions provide features which
-are not part of the standard Elastic stack, but can be used to enrich it with extra integrations.
-
-The documentation for these extensions is provided inside each individual subdirectory, on a per-extension basis. Some
-of them require manual changes to the default ELK configuration.
-
-## JVM tuning
-
-### How to specify the amount of memory used by a service
-
-The startup scripts for Elasticsearch and Logstash can append extra JVM options from the value of an environment
-variable, allowing the user to adjust the amount of memory that can be used by each component:
-
-| Service       | Environment variable |
-|---------------|----------------------|
-| Elasticsearch | ES_JAVA_OPTS         |
-| Logstash      | LS_JAVA_OPTS         |
-
-To accommodate environments where memory is scarce (Docker Desktop for Mac has only 2 GB available by default), the Heap
-Size allocation is capped by default in the `docker-compose.yml` file to 512 MB for Elasticsearch and 256 MB for
-Logstash. If you want to override the default JVM configuration, edit the matching environment variable(s) in the
-`docker-compose.yml` file.
-
-For example, to increase the maximum JVM Heap Size for Logstash:
-
-```yml
-logstash:
-
-  environment:
-    LS_JAVA_OPTS: -Xms1g -Xmx1g
+```bash
+docker compose logs -f elasticsearch
+docker compose logs -f logstash
+docker compose logs -f kibana
+docker compose logs -f thehive
+docker compose logs -f cortex
 ```
 
-When these options are not set:
+## Security Considerations
 
-* Elasticsearch starts with a JVM Heap Size that is [determined automatically][es-heap].
-* Logstash starts with a fixed JVM Heap Size of 1 GB.
+### Authentication & Authorization
 
-### How to enable a remote JMX connection to a service
+1. **Change Default Passwords**: Update all default passwords in `.env` before production use
+2. **API Keys**: Generate strong API keys for TheHive and rotate regularly
+3. **Network Isolation**: Use Docker networks to isolate services
+4. **TLS/SSL**: Enable TLS for production deployments (see ELK Stack TLS documentation)
 
-As for the Java Heap memory (see above), you can specify JVM options to enable JMX and map the JMX port on the Docker
-host.
+### Secrets Management
 
-Update the `{ES,LS}_JAVA_OPTS` environment variable with the following content (I've mapped the JMX service on the port
-18080, you can change that). Do not forget to update the `-Djava.rmi.server.hostname` option with the IP address of your
-Docker host (replace **DOCKER_HOST_IP**):
+- Never commit `.env` file to version control
+- Use Docker secrets or external secret management for production
+- Rotate credentials regularly
 
-```yml
-logstash:
+### Production Hardening
 
-  environment:
-    LS_JAVA_OPTS: -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=18080 -Dcom.sun.management.jmxremote.rmi.port=18080 -Djava.rmi.server.hostname=DOCKER_HOST_IP -Dcom.sun.management.jmxremote.local.only=false
-```
+- Enable Elasticsearch security features
+- Configure firewall rules to restrict port access
+- Use reverse proxy with authentication for web UIs
+- Enable audit logging
+- Regular backups of Elasticsearch indices and TheHive database
 
-## Going further
+## Contributing
 
-### Plugins and integrations
+Contributions are welcome! Please:
 
-See the following Wiki pages:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
-* [External applications](https://github.com/deviantony/docker-elk/wiki/External-applications)
-* [Popular integrations](https://github.com/deviantony/docker-elk/wiki/Popular-integrations)
+## License
 
-[elk-stack]: https://www.elastic.co/elastic-stack/
-[elastic-docker]: https://www.docker.elastic.co/
-[subscriptions]: https://www.elastic.co/subscriptions
-[es-security]: https://www.elastic.co/docs/reference/elasticsearch/configuration-reference/security-settings
-[license-settings]: https://www.elastic.co/docs/reference/elasticsearch/configuration-reference/license-settings
-[license-mngmt]: https://www.elastic.co/docs/deploy-manage/license/manage-your-license-in-self-managed-cluster
-[license-apis]: https://www.elastic.co/docs/api/doc/elasticsearch/group/endpoint-license
+This project includes components with different licenses:
 
-[elastdocker]: https://github.com/sherifabdlnaby/elastdocker
+- This integration: Apache License 2.0 (see [LICENSE](LICENSE))
+- Elastic Stack: Elastic License
+- TheHive: AGPL-3.0
+- Cortex: AGPL-3.0
 
-[docker-install]: https://docs.docker.com/get-started/get-docker/
-[compose-install]: https://docs.docker.com/compose/install/
-[linux-postinstall]: https://docs.docker.com/engine/install/linux-postinstall/
-[desktop-filesharing]: https://docs.docker.com/desktop/settings-and-maintenance/settings/#file-sharing
+Please review individual component licenses before use.
 
-[bootstrap-checks]: https://www.elastic.co/docs/deploy-manage/deploy/self-managed/bootstrap-checks
-[es-sys-config]: https://www.elastic.co/docs/deploy-manage/deploy/self-managed/important-system-configuration
-[es-heap]: https://www.elastic.co/docs/deploy-manage/deploy/self-managed/important-settings-configuration#heap-size-settings
+## References
 
-[builtin-users]: https://www.elastic.co/docs/deploy-manage/users-roles/cluster-or-deployment-auth/built-in-users
-[ls-monitoring]: https://www.elastic.co/docs/reference/logstash/monitoring-with-metricbeat
-[sec-cluster]: https://www.elastic.co/docs/deploy-manage/security#cluster-or-deployment-security-features
+- [Elastic Stack Documentation](https://www.elastic.co/guide/index.html)
+- [TheHive Documentation](https://docs.strangebee.com/)
+- [Cortex Documentation](https://github.com/TheHive-Project/Cortex)
+- [MISP Documentation](https://www.misp-project.org/documentation/)
+- [OpenCTI Documentation](https://docs.opencti.io/)
 
-[config-es]: ./elasticsearch/config/elasticsearch.yml
-[config-kbn]: ./kibana/config/kibana.yml
-[config-ls]: ./logstash/config/logstash.yml
+## Acknowledgments
 
-[es-docker]: https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-with-docker
-[kbn-docker]: https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-kibana-with-docker
-[ls-docker]: https://www.elastic.co/docs/reference/logstash/docker-config
+Based on the excellent [docker-elk](https://github.com/deviantony/docker-elk) project by [@deviantony](https://github.com/deviantony), extended with security operations and threat intelligence capabilities.
 
-[upgrade]: https://www.elastic.co/docs/deploy-manage/upgrade/deployment-or-cluster/self-managed
+---
 
-<!-- markdownlint-configure-file
-{
-  "MD033": {
-    "allowed_elements": [ "picture", "source", "img" ]
-  }
-}
--->
+**Note**: This platform is designed for security operations and threat intelligence purposes. Ensure compliance with your organization's security policies and applicable laws when deploying and using this system.

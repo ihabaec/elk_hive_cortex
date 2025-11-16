@@ -16,15 +16,15 @@ from typing import Dict, List, Any, Optional
 LAST_ID_FILE = ".last_alert_id"
 
 # Elasticsearch Configuration
-ES_HOST = "http://192.168.11.110:9200"
+ES_HOST = "http://localhost:9200"
 ES_INDEX = ".siem-signals-default"
 ES_AUTH = ("elastic", "changeme")
 
 # TheHive Configuration
-THEHIVE_BASE_URL = "http://192.168.11.110:9000/api"
+THEHIVE_BASE_URL = "http://localhost:9000/api"
 THEHIVE_ALERT_URL = f"{THEHIVE_BASE_URL}/alert"
 THEHIVE_CASE_URL = f"{THEHIVE_BASE_URL}/case"
-THEHIVE_API_KEY = "BkLDGNqEErQfdVwmfoQgNlTssTZi4mrt"
+THEHIVE_API_KEY = "5Kl87O1390n3CCLluoUYswizy9PTxlfr"
 
 # Polling Configuration
 POLL_INTERVAL = 30
@@ -480,6 +480,9 @@ def process_alert(alert_doc: Dict[str, Any], alert_id: str) -> tuple[Optional[st
 def poll_alerts() -> None:
     """Main polling loop to monitor Elasticsearch for new alerts."""
     last_alert_id = None
+    processed_ids = set()
+    
+    # Load the last processed alert ID
     try:
         with open(LAST_ID_FILE, "r") as f:
             last_alert_id = f.read().strip()
@@ -491,30 +494,67 @@ def poll_alerts() -> None:
     
     while True:
         try:
+            # Build query to get all alerts sorted by timestamp
+            query = {"match_all": {}}
+            
             res = es.search(
                 index=ES_INDEX,
-                size=1,
-                sort=[{"@timestamp": "desc"}],
-                query={"match_all": {}}
+                size=50,
+                sort=[{"@timestamp": "asc"}],  # oldest first
+                query=query
             )
+            
             hits = res.get("hits", {}).get("hits", [])
-            if hits:
-                alert = hits[0]
+            
+            logger.info(f"Found {len(hits)} total alerts in index")
+            
+            if not hits:
+                logger.debug("No alerts found in index")
+                time.sleep(POLL_INTERVAL)
+                continue
+            
+            # Find new alerts (those after last_alert_id)
+            new_alerts = []
+            found_last = False if last_alert_id else True  # If no last_alert_id, process all
+            
+            for alert in hits:
+                alert_id = alert["_id"]
+                
+                # Skip until we find the last processed alert
+                if not found_last:
+                    if alert_id == last_alert_id:
+                        found_last = True
+                    continue  # Skip this and all previous alerts
+                
+                # Skip if already processed in this session
+                if alert_id in processed_ids:
+                    continue
+                    
+                new_alerts.append(alert)
+            
+            logger.info(f"Found {len(new_alerts)} new alerts to process")
+            
+            # Process each new alert
+            for alert in new_alerts:
                 alert_id = alert["_id"]
                 alert_doc = alert["_source"]
-                if alert_id != last_alert_id:
-                    logger.info(f"New alert detected: {alert_id}")
-                    alert_thehive_id, case_id = process_alert(alert_doc, alert_id)
-                    last_alert_id = alert_id
-                    with open(LAST_ID_FILE, "w") as f:
-                        f.write(alert_id)
-                    logger.info(f"Updated last alert ID to: {alert_id}")
-                else:
-                    logger.debug("No new alerts")
-            else:
-                logger.warning("No documents found in index")
+                alert_timestamp = alert_doc.get("@timestamp")
+                
+                logger.info(f"Processing alert {alert_id} from {alert_timestamp}")
+                process_alert(alert_doc, alert_id)
+                
+                # Update last alert ID after successful processing
+                last_alert_id = alert_id
+                processed_ids.add(alert_id)
+                with open(LAST_ID_FILE, "w") as f:
+                    f.write(last_alert_id)
+                logger.debug(f"Updated last alert ID to: {alert_id}")
+        
         except Exception as e:
             logger.error(f"Error polling alerts: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+        
         logger.debug(f"Sleeping for {POLL_INTERVAL} seconds...")
         time.sleep(POLL_INTERVAL)
 
