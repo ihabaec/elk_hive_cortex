@@ -11,20 +11,20 @@ from elasticsearch import Elasticsearch
 import json
 import logging
 from typing import Dict, List, Any, Optional
-
+IP = 127.0.0.1
 # === CONFIGURATION ===
 LAST_ID_FILE = ".last_alert_id"
 
 # Elasticsearch Configuration
-ES_HOST = "http://localhost:9200"
+ES_HOST = "http://{IP}:9200"
 ES_INDEX = ".siem-signals-default"
 ES_AUTH = ("elastic", "changeme")
 
 # TheHive Configuration
-THEHIVE_BASE_URL = "http://localhost:9000/api"
+THEHIVE_BASE_URL = "http://{IP}:9000/api"
 THEHIVE_ALERT_URL = f"{THEHIVE_BASE_URL}/alert"
 THEHIVE_CASE_URL = f"{THEHIVE_BASE_URL}/case"
-THEHIVE_API_KEY = "5Kl87O1390n3CCLluoUYswizy9PTxlfr"
+THEHIVE_API_KEY = "placeholder"
 
 # Polling Configuration
 POLL_INTERVAL = 30
